@@ -1,130 +1,45 @@
-# Bradesco---GenAI-Dados---Assistente-de-Voz
-Assistente de Voz - Gemini e Python
+# 🎙️ Assistente de Voz com Gemini e Whisper
 
-language = 'pt'
+[![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/)
+[![Google Gemini](https://img.shields.io/badge/AI-Google%20Gemini-orange)](https://ai.google.dev/)
+[![Whisper](https://img.shields.io/badge/SpeechToText-Whisper-green)](https://github.com/openai/whisper)
 
-# Referência: https://gist.github.com/korakot/c21c3476c024ad6d56d5f48b0bca92be
+Este projeto é um assistente de voz completo desenvolvido para rodar no **Google Colab**. Ele utiliza o modelo **Whisper** da OpenAI para transcrição e o **Google Gemini** para processamento de linguagem natural e geração de respostas.
 
-from IPython.display import Audio, display, Javascript
-from google.colab import output
-from base64 import b64decode
 
-# Código JavaScript para gravar áudio do usuário usando a "MediaStream Recording API"
-RECORD = """
-const sleep  = time => new Promise(resolve => setTimeout(resolve, time))
-const b2text = blob => new Promise(resolve => {
-  const reader = new FileReader()
-  reader.onloadend = e => resolve(e.srcElement.result)
-  reader.readAsDataURL(blob)
-})
-var record = time => new Promise(async resolve => {
-  stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-  recorder = new MediaRecorder(stream)
-  chunks = []
-  recorder.ondataavailable = e => chunks.push(e.data)
-  recorder.start()
-  await sleep(time)
-  recorder.onstop = async ()=>{
-    blob = new Blob(chunks)
-    text = await b2text(blob)
-    resolve(text)
-  }
-  recorder.stop()
-})
-"""
 
-def record(sec=5):
-  # Executa o código JavaScript para gravar o áudio
-  display(Javascript(RECORD))
-  # Recebe o áudio gravado como resultado do JavaScript
-  js_result = output.eval_js('record(%s)' % (sec * 1000))
-   # Decodifica o áudio em base64
-  audio = b64decode(js_result.split(',')[1])
-  # Salva o áudio em um arquivo
-  file_name = 'request_audio.wav'
-  with open(file_name, 'wb') as f:
-    f.write(audio)
-  # Retorna o caminho do arquivo de áudio (pasta padrão do Google Colab)
-  return f'/content/{file_name}'
+## 🚀 Funcionalidades
 
-# Grava o áudio do usuário por um tempo determinado (padrão 5 segundos)
-print('Ouvindo...\n')
-record_file = record()
+* **Captação de Áudio:** Gravação direta via navegador usando JavaScript.
+* **Speech-to-Text:** Transcrição precisa com o modelo Whisper (OpenAI).
+* **Inteligência Artificial:** Processamento de contexto e resposta via Gemini (Google).
+* **Text-to-Speech:** Conversão da resposta em áudio utilizando gTTS.
 
-# Exibe o áudio gravado
-display(Audio(record_file, autoplay=False))
+---
 
-!pip install git+https://github.com/openai/whisper.git -q
+## 🛠️ Tecnologias Utilizadas
 
-import whisper
+| Ferramenta | Função |
+| :--- | :--- |
+| **Python** | Linguagem principal |
+| **Whisper** | Transcrição de áudio para texto |
+| **Google Gemini** | Modelo de linguagem (LLM) |
+| **gTTS** | Google Text-to-Speech para a voz de saída |
+| **Google Colab** | Ambiente de execução |
 
-# Selecione o modelo do Whisper que melhor atenda às suas necessidades:
-# https://github.com/openai/whisper#available-models-and-languages
-model = whisper.load_model("small")
+---
 
-# Transcreve o audio gravado anteriormente.
-result = model.transcribe(record_file, fp16=False, language=language)
-transcription = result["text"]
-print(transcription)
+## 📋 Como Configurar
 
-!pip install -q -U google-genai
+### 1. Obter Chave da API
+Para utilizar este projeto, você precisará de uma chave de API do Google AI Studio:
+1.  Acesse o [Google AI Studio](https://aistudio.google.com/).
+2.  Crie uma nova **API Key**.
+3.  No Google Colab, adicione a chave nos "Secrets" (ícone de chave na lateral esquerda) com o nome `GOOGLE_API_KEY`.
 
-import os
-
-# Documentação Oficial da API OpenAI: https://platform.openai.com/docs/api-reference/introduction
-# Informações sobre o Período Gratuito: https://help.openai.com/en/articles/4936830
-
-# Para gerar uma API Key:
-# 1. Crie uma conta na OpenAI
-# 2. Acesse a seção "API Keys"
-# 3. Clique em "Create API Key"
-# Link direto: https://platform.openai.com/account/api-keys
-
-# Substitua o texto "TODO" por sua API Key da OpenAI, ela será salva como uma variável de ambiente.
-os.environ['GOOGLE_API_KEY'] = 'TODO'
-
-import google.generativeai as genai
-from google.colab import userdata
-
-# 1. Configuração Inicial
-try:
-    api_key = userdata.get('GOOGLE_API_KEY')
-    genai.configure(api_key=api_key)
-
-    # 2. TRUQUE: Listar modelos disponíveis e escolher o primeiro que funcione
-    # Isso evita o erro 404 de 'model not found'
-    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-    
-    if not available_models:
-        raise Exception("Nenhum modelo de chat disponível na sua chave.")
-    
-    # Escolhemos o modelo mais moderno da lista automaticamente
-    selected_model = available_models[0]
-    model = genai.GenerativeModel(selected_model)
-
-    # 3. Gera a resposta usando a 'transcription' da Parte 2
-    response = model.generate_content(transcription)
-    chatgpt_response = response.text
-    
-    print("-" * 30)
-    print(f"Modelo usado: {selected_model}")
-    print("Resposta do Assistente:", chatgpt_response)
-    print("-" * 30)
-
-except Exception as e:
-    print(f"Erro na Integração: {e}")
-    chatgpt_response = "Tive um problema técnico, mas você pode tentar gravar de novo."
-
-    !pip install gTTS
-
-    from gtts import  gTTS
-
-# Cria um objeto gTTS com a resposta gerada pelo ChatGPT e a língua que será sintetizada em voz (variável "language").
-gtts_object = gTTS(text=chatgpt_response, lang=language, slow=False)
-
-# Salva o áudio da resposta no arquivo especificado (pasta padrão do Google Colab)
-response_audio = "/content/response_audio.wav"
-gtts_object.save(response_audio)
-
-# Reproduz o áudio da resposta salvo no arquivo
-display(Audio(response_audio, autoplay=True))
+### 2. Instalação de Dependências
+O projeto requer as seguintes bibliotecas que serão instaladas automaticamente ao executar o notebook:
+```bash
+pip install git+[https://github.com/openai/whisper.git](https://github.com/openai/whisper.git)
+pip install -q -U google-genai
+pip install gTTS
